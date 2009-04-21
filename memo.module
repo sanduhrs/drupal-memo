@@ -1,0 +1,219 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Memo - add memos to your objects
+ * 
+ * @author
+ * Stefan Auditor <stefan.auditor@erdfisch.de>
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function memo_perm() {
+  return array('add memo', 'view all memos');
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function memo_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  global $user;
+  
+  switch ($op) {
+    case 'insert':
+    case 'update':
+      if (strlen(trim($node->memo))) {
+        memo_save($node->nid, 'node', $user->uid, $node->memo);
+      }
+      break;
+    case 'delete':
+      memo_delete($node->nid, 'node');
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function memo_form_alter($form_id, &$form) {
+  if (!user_access('add memo')) {
+    return;
+  }
+  
+  if (strpos($form_id, '_node_form')) {
+    
+    $memos = memo_load($form['#node']->nid, 'node');
+    $count = count($memos);
+    
+    $form['memo'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#title' => t('Memos (!count)', array('!count' => $count)),
+      '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+    );
+    $form['memo']['memo'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Memo'),
+      '#default_value' => '',
+    );
+  }
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function memo_user($op, &$edit, &$account, $category = NULL) {
+  global $user;
+  
+  switch ($op) {
+    case 'form':
+      if (!user_access('add memo')) {
+        return;
+      }
+      
+      $memos = memo_load($account->uid, 'user');
+      $count = count($memos);
+      
+      $form['memo'] = array(
+        '#type' => 'fieldset',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#title' => t('Memos (!count)', array('!count' => $count)),
+        '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+      );
+      $form['memo']['memo'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Memo'),
+        '#default_value' => '',
+      );
+      return $form;
+      break;
+    case 'submit':
+      if (strlen(trim($edit['memo']))) {
+        memo_save($account->uid, 'user', $user->uid, $edit['memo']);
+      }
+      unset($edit['memo']);
+      break;
+    case 'delete':
+      memo_delete($account->uid, 'user');
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_comment().
+ */
+function memo_comment(&$a1, $op) {
+  global $user;
+
+  switch ($op) {
+    case 'form':
+      if (!user_access('add memo')) {
+        return;
+      }
+      
+      $memos = memo_load($a1['cid']['#value'], 'comment');
+      $count = count($memos);
+      
+      $form['memo'] = array(
+        '#type' => 'fieldset',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#title' => t('Memos (!count)', array('!count' => $count)),
+        '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+      );
+      $form['memo']['memo'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Memo'),
+        '#default_value' => '',
+      );
+      return $form;
+      break;
+    case 'insert':
+    case 'update':
+      if (strlen(trim($a1['memo']))) {
+        memo_save($a1['cid'], 'comment', $user->uid, $a1['memo']);
+      }
+      break;
+    case 'delete':
+      memo_delete($a1->cid, 'comment');
+      break;
+  }
+}
+
+
+/**
+ * Save a memo
+ */
+function memo_save($obj_id, $odj_type, $uid, $memo) {
+  return db_query("INSERT INTO {memo} SET obj_id = %d, obj_type = '%s', uid = %d, memo = '%s', timestamp = %d", $obj_id, $odj_type, $uid, $memo, time());
+}
+
+/**
+ * Memo load switch
+ */
+function memo_load($obj_id, $obj_type) {
+  if (user_access('view all memos')) {
+    $memos = memo_load_all($obj_id, $obj_type);
+  }
+  else {
+    $memos = memo_load_user($obj_id, $obj_type);
+  }
+  return $memos;
+}
+
+/**
+ * Load all memos
+ */
+function memo_load_all($obj_id, $obj_type) {
+  $items = array();
+  
+  $query = "SELECT * FROM {memo} WHERE obj_id = %d AND obj_type = '%s' ORDER BY timestamp DESC";
+  $result = db_query($query, $obj_id, $obj_type);
+  while ($row = db_fetch_object($result)) {
+    $items[] = $row;
+  }
+  return $items;
+}
+
+/**
+ * Load a users memos
+ */
+function memo_load_user($obj_id, $obj_type) {
+  global $user;
+  $items = array();
+  
+  $query = "SELECT * FROM {memo} WHERE obj_id = %d AND obj_type = '%s' AND uid = %d ORDER BY timestamp DESC";
+  $result = db_query($query, $obj_id, $obj_type, $user->uid);
+  while ($row = db_fetch_object($result)) {
+    $items[] = $row;
+  }
+  return $items;
+}
+
+/**
+ * Delete an objects memos
+ */
+function memo_delete($obj_id, $obj_type) {
+  $query = "DELETE FROM {memo} WHERE obj_id = %d AND obj_type = '%s'"; 
+  return db_query($query, $obj_id, $obj_type);
+}
+
+/**
+ * Theme memos
+ */
+function theme_memos($memos) {
+  $output = '<div class="memo-user">';
+  foreach ($memos as $key => $value) {
+    $account = user_load(array('uid' => $value->uid));
+    $items[] = '<div class="memo-submitted">Memo by <span class="author">'. theme('username', $account) .'<span> on <span>'. format_date($value->timestamp, 'small') .'</span></div><div class="memo"><p>'. htmlentities($value->memo, ENT_COMPAT, 'UTF-8') .'</p></div>';
+  }
+  $output .= theme('item_list', $items);
+  $output .= '</div>';
+  return $output;
+}
+

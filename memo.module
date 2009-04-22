@@ -4,7 +4,7 @@
 /**
  * @file
  * Memo - add memos to your objects
- * 
+ *
  * @author
  * Stefan Auditor <stefan.auditor@erdfisch.de>
  */
@@ -14,6 +14,19 @@
  */
 function memo_perm() {
   return array('add memo', 'view all memos');
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function memo_theme() {
+  return array(
+    'memos' => array(
+      'arguments' => array(
+        'memos',
+      ),
+    ),
+  );
 }
 
 /**
@@ -38,16 +51,16 @@ function memo_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 /**
  * Implementation of hook_form_alter().
  */
-function memo_form_alter($form_id, &$form) {
+function memo_form_alter(&$form, &$form_state, $form_id) {
   if (!user_access('add memo')) {
     return;
   }
-  
+
   if (strpos($form_id, '_node_form')) {
-    
+
     $memos = memo_load($form['#node']->nid, 'node');
     $count = count($memos);
-    
+
     $form['memo'] = array(
       '#type' => 'fieldset',
       '#collapsible' => TRUE,
@@ -68,16 +81,16 @@ function memo_form_alter($form_id, &$form) {
  */
 function memo_user($op, &$edit, &$account, $category = NULL) {
   global $user;
-  
+
   switch ($op) {
     case 'form':
       if (!user_access('add memo')) {
         return;
       }
-      
+
       $memos = memo_load($account->uid, 'user');
       $count = count($memos);
-      
+
       $form['memo'] = array(
         '#type' => 'fieldset',
         '#collapsible' => TRUE,
@@ -112,27 +125,7 @@ function memo_comment(&$a1, $op) {
 
   switch ($op) {
     case 'form':
-      if (!user_access('add memo')) {
-        return;
-      }
-      
-      $memos = memo_load($a1['cid']['#value'], 'comment');
-      $count = count($memos);
-      
-      $form['memo'] = array(
-        '#type' => 'fieldset',
-        '#collapsible' => TRUE,
-        '#collapsed' => TRUE,
-        '#title' => t('Memos (!count)', array('!count' => $count)),
-        '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
-      );
-      $form['memo']['memo'] = array(
-        '#type' => 'textarea',
-        '#title' => t('Memo'),
-        '#default_value' => '',
-      );
-      return $form;
-      break;
+        break;
     case 'insert':
     case 'update':
       if (strlen(trim($a1['memo']))) {
@@ -145,12 +138,45 @@ function memo_comment(&$a1, $op) {
   }
 }
 
+/**
+ * Implementation of hook_form_comment_form_alter().
+ */
+function memo_form_comment_form_alter(&$form, &$form_state) {
+  if (!user_access('add memo')) {
+    return;
+  }
+
+  $memos = memo_load($form['cid']['#value'], 'comment');
+  $count = count($memos);
+
+  $form['memo'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#title' => t('Memos (!count)', array('!count' => $count)),
+    '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+  );
+  $form['memo']['memo'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Memo'),
+    '#default_value' => '',
+  );
+  return $form;
+}
+
 
 /**
  * Save a memo
  */
-function memo_save($obj_id, $odj_type, $uid, $memo) {
-  return db_query("INSERT INTO {memo} SET obj_id = %d, obj_type = '%s', uid = %d, memo = '%s', timestamp = %d", $obj_id, $odj_type, $uid, $memo, time());
+function memo_save($obj_id, $obj_type, $uid, $memo) {
+  $memo_record = array();
+  $memo_record['obj_id'] = $obj_id;
+  $memo_record['obj_type'] = $obj_type;
+  $memo_record['uid'] = $uid;
+  $memo_record['memo'] = $memo;
+  $memo_record['timestamp'] = time();
+  return drupal_write_record('memo', $memo_record);
+  //return db_query("INSERT INTO {memo} SET obj_id = %d, obj_type = '%s', uid = %d, memo = '%s', timestamp = %d", $obj_id, $obj_type, $uid, $memo, time());
 }
 
 /**

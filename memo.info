@@ -1,3 +1,4 @@
 ; $Id$
 name         = Memo
 description  = Make memos on users, nodes and comments.
+core = 6.x

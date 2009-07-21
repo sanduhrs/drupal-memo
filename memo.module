@@ -112,7 +112,7 @@ function memo_comment(&$a1, $op) {
 
   switch ($op) {
     case 'form':
-      if (!user_access('add memo')) {
+      if (!user_access('add memo') || arg(3)) {
         return;
       }
       

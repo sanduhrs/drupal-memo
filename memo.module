@@ -84,7 +84,7 @@ function memo_user($op, &$edit, &$account, $category = NULL) {
 
   switch ($op) {
     case 'form':
-      if (!user_access('add memo')) {
+      if (!user_access('add memo') || (arg(3))) {
         return;
       }
 
@@ -242,4 +242,3 @@ function theme_memos($memos) {
   $output .= '</div>';
   return $output;
 }
-

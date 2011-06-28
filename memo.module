@@ -152,8 +152,8 @@ function memo_form_comment_form_alter(&$form, &$form_state) {
     '#type' => 'fieldset',
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
-    '#title' => t('Memos (!count)', array('!count' => $count)),
-    '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+    '#title' => t('Memos (@count)', array('@count' => $count)),
+    '#description' => !empty($memos) ? theme('memos', filter_xss($memos)) : t('No memos available.'),
   );
   $form['memo']['memo'] = array(
     '#type' => 'textarea',

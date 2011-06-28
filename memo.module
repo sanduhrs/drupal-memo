@@ -33,7 +33,7 @@ function memo_theme() {
  */
 function memo_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   global $user;
-  
+
   switch ($op) {
     case 'insert':
     case 'update':
@@ -64,8 +64,8 @@ function memo_form_alter(&$form, &$form_state, $form_id) {
       '#type' => 'fieldset',
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#title' => t('Memos (!count)', array('!count' => $count)),
-      '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+      '#title' => t('Memos (@count)', array('@count' => $count)),
+      '#description' => !empty($memos) ? theme('memos', filter_xss($memos)) : t('No memos available.'),
     );
     $form['memo']['memo'] = array(
       '#type' => 'textarea',
@@ -94,8 +94,8 @@ function memo_user($op, &$edit, &$account, $category = NULL) {
         '#type' => 'fieldset',
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
-        '#title' => t('Memos (!count)', array('!count' => $count)),
-        '#description' => !empty($memos) ? theme('memos', $memos) : t('No memos available.'),
+        '#title' => t('Memos (@count)', array('@count' => $count)),
+        '#description' => !empty($memos) ? theme('memos', filter_xss($memos)) : t('No memos available.'),
       );
       $form['memo']['memo'] = array(
         '#type' => 'textarea',
@@ -196,7 +196,7 @@ function memo_load($obj_id, $obj_type) {
  */
 function memo_load_all($obj_id, $obj_type) {
   $items = array();
-  
+
   $query = "SELECT * FROM {memo} WHERE obj_id = %d AND obj_type = '%s' ORDER BY timestamp DESC";
   $result = db_query($query, $obj_id, $obj_type);
   while ($row = db_fetch_object($result)) {
@@ -211,7 +211,7 @@ function memo_load_all($obj_id, $obj_type) {
 function memo_load_user($obj_id, $obj_type) {
   global $user;
   $items = array();
-  
+
   $query = "SELECT * FROM {memo} WHERE obj_id = %d AND obj_type = '%s' AND uid = %d ORDER BY timestamp DESC";
   $result = db_query($query, $obj_id, $obj_type, $user->uid);
   while ($row = db_fetch_object($result)) {
@@ -224,7 +224,7 @@ function memo_load_user($obj_id, $obj_type) {
  * Delete an objects memos
  */
 function memo_delete($obj_id, $obj_type) {
-  $query = "DELETE FROM {memo} WHERE obj_id = %d AND obj_type = '%s'"; 
+  $query = "DELETE FROM {memo} WHERE obj_id = %d AND obj_type = '%s'";
   return db_query($query, $obj_id, $obj_type);
 }
 
